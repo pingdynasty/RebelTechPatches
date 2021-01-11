@@ -1,3 +1,5 @@
+#ifndef __MorphMagusPatch_hpp__
+#define __MorphMagusPatch_hpp__
 
 #include "MonochromeScreenPatch.h"
 #include "OscSelector.h"
@@ -65,13 +67,13 @@ public:
     FloatArray left = buffer.getSamples(LEFT_CHANNEL);
     FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
     hzL.setTune(tuneL);
-    float freqL = hzL.getFrequency(left[0]);
+    float freqL = hzL.getFrequency(left[0]) + (FML-0.5)*50;
     float morphXL = getParameterValue(PARAMETER_AA);  
     float morphYL = getParameterValue(PARAMETER_AB); 
     
     float tuneR = getParameterValue(PARAMETER_C)*7.0 - 4.0;
     hzR.setTune(tuneR);
-    float freqR = hzR.getFrequency(right[0]);
+    float freqR = hzR.getFrequency(right[0]) + (FMR-0.5)*50;
     float morphXR = getParameterValue(PARAMETER_AC);  
     float morphYR = getParameterValue(PARAMETER_AD); 
     
@@ -108,3 +110,5 @@ MonochromeAudioDisplay display;
     display.draw(screen, WHITE);
    }
 };
+
+#endif   // __MorphMagusPatch
