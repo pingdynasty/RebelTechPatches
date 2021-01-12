@@ -8,12 +8,11 @@
 
 #define baseFrequency (20)  /* starting frequency of first table */  // c1 = 32.7 Hz
 
-#include "alien10752.h"
-#include "additive10752.h"
+#include "alien10752.h"		/* left channel wavetable */ 
+#include "additive10752.h"	/* right channel wavetable */ 
 
 class MorphMagusPatch : public MonochromeScreenPatch {
 	VoltsPerOctave hzL;
-	VoltsPerOctave hzR;
 private:
   OscSelector *morphL;
   OscSelector *morphR;
@@ -42,19 +41,19 @@ public:
 	  registerParameter(PARAMETER_AA, "MorphXL");
 	  registerParameter(PARAMETER_AB, "MorphYL");
 
-    setParameterValue(PARAMETER_A, 0.3);
-    setParameterValue(PARAMETER_B, 0.5);
+    setParameterValue(PARAMETER_A, 0.5);
+    setParameterValue(PARAMETER_B, 0.1);
     //setParameterValue(PARAMETER_AA, 0.126);
     //setParameterValue(PARAMETER_AB, 0.6);
 	  
 // Morhp oscilator Right
-	  registerParameter(PARAMETER_C, "TuneR");
+	  registerParameter(PARAMETER_C, "OffsetR");
 	  registerParameter(PARAMETER_D, "FMR");
 	  registerParameter(PARAMETER_AC, "MorphXR");
 	  registerParameter(PARAMETER_AD, "MorphYR");
 
-    setParameterValue(PARAMETER_C, 0.3);
-    setParameterValue(PARAMETER_D, 0.5);
+    setParameterValue(PARAMETER_C, 0);
+    setParameterValue(PARAMETER_D, 0.1);
     //setParameterValue(PARAMETER_AC, 0.126);
     //setParameterValue(PARAMETER_AD, 0.6);
 ;  }
@@ -63,29 +62,28 @@ public:
     float npast;
     float FML = getParameterValue(PARAMETER_B);
     float FMR = getParameterValue(PARAMETER_D);
-    float tuneL = getParameterValue(PARAMETER_A)*7.0 - 4.0;
+    float tuneL = getParameterValue(PARAMETER_A)-0.5;
     FloatArray left = buffer.getSamples(LEFT_CHANNEL);
     FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
-    hzL.setTune(tuneL);
-    float freqL = hzL.getFrequency(left[0]) + (FML-0.5)*50;
+    hzL.setTune(tuneL/12.0);
+    float freq = hzL.getFrequency(left[0]);
+    float freqL = freq;
     float morphXL = getParameterValue(PARAMETER_AA);  
     float morphYL = getParameterValue(PARAMETER_AB); 
     
-    float tuneR = getParameterValue(PARAMETER_C)*7.0 - 4.0;
-    hzR.setTune(tuneR);
-    float freqR = hzR.getFrequency(right[0]) + (FMR-0.5)*50;
+	float offsetR = getParameterValue(PARAMETER_C)*24;
+	//int offsetR = getParameterValue(PARAMETER_C)*24;
+    float freqR = exp(log(freqL)+log(2)*offsetR/12.0);
     float morphXR = getParameterValue(PARAMETER_AC);  
     float morphYR = getParameterValue(PARAMETER_AD); 
     
     
-    morphL->setMorphY(morphYL);
+    morphL->setMorphY(morphYL);					// always set Y before X
     morphL->setFrequency(freqL/sampleRate);
     morphL->setMorphX(morphXL);
     morphR->setMorphY(morphYR);
     morphR->setFrequency((freqR)/sampleRate);
     morphR->setMorphX(morphXR);
-    //FML = getParameterValue(PARAMETER_B) - 0.4991;
-    //FMR = getParameterValue(PARAMETER_F) - 0.4991;
 
     
     for(int n = 0; n<buffer.getSize(); n++){
@@ -100,7 +98,7 @@ public:
 	}    
 	
     display.update(left, 2, 0.0, 3.0, 0.0);
-    debugMessage("out" , FML , FMR )	;	
+    debugMessage("out" , freq , FMR )	;	
 
 	}
 	
