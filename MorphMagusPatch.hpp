@@ -56,6 +56,11 @@ public:
     setParameterValue(PARAMETER_D, 0.1);
     //setParameterValue(PARAMETER_AC, 0.126);
     //setParameterValue(PARAMETER_AD, 0.6);
+    
+// Super parameters
+	  registerParameter(PARAMETER_BA, "Tune");   
+	  
+    //setParameterValue(PARAMETER_BA, 0.5); 
 ;  }
   void processAudio(AudioBuffer &buffer) {
     
@@ -63,17 +68,18 @@ public:
     float FML = getParameterValue(PARAMETER_B);
     float FMR = getParameterValue(PARAMETER_D);
     float tuneL = getParameterValue(PARAMETER_A)-0.5;
+    float tune = getParameterValue(PARAMETER_BA)-0.5;
     FloatArray left = buffer.getSamples(LEFT_CHANNEL);
     FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
-    hzL.setTune(tuneL/12.0);
+    hzL.setTune(tune/12.0);
     float freq = hzL.getFrequency(left[0]);
-    float freqL = freq;
+    float freqL = exp(log(freq)+log(2)*tuneL/12.0);
     float morphXL = getParameterValue(PARAMETER_AA);  
     float morphYL = getParameterValue(PARAMETER_AB); 
     
 	float offsetR = getParameterValue(PARAMETER_C)*24;
 	//int offsetR = getParameterValue(PARAMETER_C)*24;
-    float freqR = exp(log(freqL)+log(2)*offsetR/12.0);
+    float freqR = exp(log(freq)+log(2)*offsetR/12.0);
     float morphXR = getParameterValue(PARAMETER_AC);  
     float morphYR = getParameterValue(PARAMETER_AD); 
     
