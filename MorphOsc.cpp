@@ -1,6 +1,6 @@
 #include "MorphOsc.h"
 
-MorphOsc::MorphOsc(void) {										// initialisation
+MorphOsc::MorphOsc(void) {										
     phasor = 0.0;
     phaseInc = 0.0;
     phaseOfs = 0.5;
