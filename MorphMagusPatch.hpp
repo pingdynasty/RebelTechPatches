@@ -57,10 +57,26 @@ public:
     //setParameterValue(PARAMETER_AC, 0.126);
     //setParameterValue(PARAMETER_AD, 0.6);
     
+// Modulations
+    //registerParameter(PARAMETER_E, "LFO1>");
+    //registerParameter(PARAMETER_F, "LFO2>");
+    
+    //setParameterValue(PARAMETER_E, 0.26);
+    //setParameterValue(PARAMETER_F, 0.51);    
+    //setParameterValue(PARAMETER_AE, 0.26);
+    //setParameterValue(PARAMETER_AF, 0.51);
+    
 // Super parameters
-	  registerParameter(PARAMETER_BA, "Tune");   
-	  
+	registerParameter(PARAMETER_BA, "Tune"); 
+    //registerParameter(PARAMETER_BB, "Tempo");
+    //registerParameter(PARAMETER_BC, "LFO1");
+    //registerParameter(PARAMETER_BD, "LFO2");
+  
     //setParameterValue(PARAMETER_BA, 0.5); 
+    //setParameterValue(PARAMETER_BB, 0.5);
+    //setParameterValue(PARAMETER_BC, 0.2);
+    //setParameterValue(PARAMETER_BD, 0.4);
+    
 ;  }
   void processAudio(AudioBuffer &buffer) {
     
@@ -85,12 +101,37 @@ public:
     
     
     morphL->setMorphY(morphYL);					// always set Y before X
-    morphL->setFrequency(freqL/sampleRate);
+    for(int n = 0; n<buffer.getSize(); n++){
+    morphL->setFrequency((freqL+right[n]*FML*2000)/sampleRate);
+	}
     morphL->setMorphX(morphXL);
     morphR->setMorphY(morphYR);
-    morphR->setFrequency((freqR)/sampleRate);
+    for(int n = 0; n<buffer.getSize(); n++){
+    morphR->setFrequency((freqR+right[n]*FMR*2000)/sampleRate);
+	}
     morphR->setMorphX(morphXR);
+    
+    float tempo = getParameterValue(PARAMETER_BB)*16 + 0.5;
+    
+    static float lfo1 = 0;
+    if(lfo1 > 1.0){
+      lfo1 = 0;
+    }else{
+    }
+    lfo1 += 2 * getBlockSize() / getSampleRate();
+    tempo = getParameterValue(PARAMETER_BC)*4+0.01;
+    lfo1 += tempo * getBlockSize() / getSampleRate();
+    //setParameterValue(PARAMETER_AE, lfo1*0.4);
 
+    static float lfo2 = 0;
+    if(lfo2 > 1.0){
+      lfo2 = 0;
+    }else{
+    }
+    lfo2 += 1 * getBlockSize() / getSampleRate();
+    tempo = getParameterValue(PARAMETER_BD)*4+0.01;
+    lfo2 += tempo * getBlockSize() / getSampleRate();
+    //setParameterValue(PARAMETER_AF, lfo2*0.4);
     
     for(int n = 0; n<buffer.getSize(); n++){
 	
