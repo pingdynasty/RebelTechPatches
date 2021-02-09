@@ -87,14 +87,14 @@ public:
     float tune = getParameterValue(PARAMETER_BA)-0.5;
     FloatArray left = buffer.getSamples(LEFT_CHANNEL);
     FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
-    hzL.setTune(tune/12.0);
+    hzL.setTune((tune/12.0)-4.0);
     float freq = hzL.getFrequency(left[0]);
     float freqL = exp(log(freq)+log(2)*tuneL/12.0);
     float morphXL = getParameterValue(PARAMETER_AA);  
     float morphYL = getParameterValue(PARAMETER_AB); 
     
-	float offsetR = getParameterValue(PARAMETER_C)*24;
-	//int offsetR = getParameterValue(PARAMETER_C)*24;
+	//float offsetR = getParameterValue(PARAMETER_C)*24;
+	int offsetR = getParameterValue(PARAMETER_C)*24;
     float freqR = exp(log(freq)+log(2)*offsetR/12.0);
     float morphXR = getParameterValue(PARAMETER_AC);  
     float morphYR = getParameterValue(PARAMETER_AD); 
@@ -102,12 +102,12 @@ public:
     
     morphL->setMorphY(morphYL);					// always set Y before X
     for(int n = 0; n<buffer.getSize(); n++){
-    morphL->setFrequency((freqL+right[n]*FML*2000)/sampleRate);
+    morphL->setFrequency((freqL+right[n]*FML*freqL/2)/sampleRate);
 	}
     morphL->setMorphX(morphXL);
     morphR->setMorphY(morphYR);
     for(int n = 0; n<buffer.getSize(); n++){
-    morphR->setFrequency((freqR+right[n]*FMR*2000)/sampleRate);
+    morphR->setFrequency((freqR+right[n]*FMR*freqR/2)/sampleRate);
 	}
     morphR->setMorphX(morphXR);
     
