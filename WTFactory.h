@@ -15,7 +15,8 @@ class WTFactory {
 	
 	ComplexFloatArray fft;
 	ComplexFloatArray tmp;
-	FloatArray dest;
+	FloatArray dest128;
+	FloatArray dest64;
 	FloatArray zeros;
 	
 	public:
@@ -27,13 +28,15 @@ class WTFactory {
 		fourier->init(SAMPLE_LEN);
 		fft = ComplexFloatArray::create(SAMPLE_LEN);
 		tmp = ComplexFloatArray::create(SAMPLE_LEN);
-		dest = FloatArray::create(SAMPLE_LEN);
+		dest128 = FloatArray::create(128);
+		dest64 = FloatArray::create(64);
 		zeros = FloatArray::create(SAMPLE_LEN);
 	}
 	~WTFactory(){
 	ComplexFloatArray::destroy(fft);
 	ComplexFloatArray::destroy(tmp);
-	FloatArray::destroy(dest);
+	FloatArray::destroy(dest128);
+	FloatArray::destroy(dest64);
 	FloatArray::destroy(zeros);
 }
 	
