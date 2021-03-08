@@ -11,9 +11,9 @@
 
 #define sampleRate 48000
 
-#define NOF_OSC 7
+#define NOF_OSC 8
 #define SAMPLE_LEN 256
-#define NOF_SAMPLES 6
+#define NOF_SAMPLES 8
 #define NOF_BandLimWT 7
 
 const int numWaveTableSlots = NOF_BandLimWT*NOF_SAMPLES + 2;
@@ -52,6 +52,8 @@ public:
     
     float getMorphOutput();
 	float getOutputAtIndex(int waveTableIdx);
+	
+    int getInferiorIndex();
 };
 
 
@@ -89,5 +91,13 @@ inline void MorphOsc::setMorphOffset(float moffset) {
     morphOfs = moffset;
 }
 
+inline int MorphOsc::getInferiorIndex() {
+	int waveTableIdx = 0;
+    waveTableIdx = ((int) (this->morphor * this->numWaveForms)) * ((this->numWaveTables));
+    while (((this->phaseInc >= this->WaveTables[waveTableIdx].topFreq)) && (waveTableIdx < (this->totalWaves - 1))) {
+        ++waveTableIdx;
+    }
+    return waveTableIdx;
+}
 
 #endif

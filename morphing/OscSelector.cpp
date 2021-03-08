@@ -69,3 +69,7 @@ void OscSelector::updatePhases()  {
     up -> updatePhase();
     
 }
+
+int OscSelector::getInferiorIndex() {
+    return down -> getInferiorIndex();
+}

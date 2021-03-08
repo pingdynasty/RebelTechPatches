@@ -94,7 +94,7 @@ public:
     float morphYL = getParameterValue(PARAMETER_AB); 
     
 	//float offsetR = getParameterValue(PARAMETER_C)*24;
-	int offsetR = getParameterValue(PARAMETER_C)*24;
+	float offsetR = getParameterValue(PARAMETER_C)*24*3;
     float freqR = exp(log(freq)+log(2)*offsetR/12.0);
     float morphXR = getParameterValue(PARAMETER_AC);  
     float morphYR = getParameterValue(PARAMETER_AD); 
@@ -135,8 +135,8 @@ public:
     
     for(int n = 0; n<buffer.getSize(); n++){
 	
-	left[n] = (morphL->get2DOutput()) * 0.5;
-	right[n] = morphR->get2DOutput() * 0.5;	
+	left[n] = (morphL->get2DOutput()) * 0.1;
+	right[n] = morphR->get2DOutput() * 0.1;	
     morphL->updatePhases();				
     morphR->updatePhases();
     //leftright[n] = left[n];
@@ -145,7 +145,7 @@ public:
 	}    
 	
     display.update(left, 2, 0.0, 3.0, 0.0);
-    debugMessage("out" , freq , FMR )	;	
+    debugMessage("out" , (int)(freqR), morphR->getInferiorIndex() )	;	
 
 	}
 	

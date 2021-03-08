@@ -25,4 +25,5 @@ public:
 	void setFrequency(float freq);   
     float get2DOutput();
     void updatePhases();
+    int getInferiorIndex();
 };
