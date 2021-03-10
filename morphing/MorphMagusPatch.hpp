@@ -8,8 +8,8 @@
 
 #define baseFrequency (20)  /* starting frequency of first table */  // c1 = 32.7 Hz
 
-#include "alien10752.h"		/* left channel wavetable */ 
-#include "additive10752.h"	/* right channel wavetable */ 
+#include "morphing/wavetables/spectral64.h"		/* left channel wavetable */ 
+#include "morphing/wavetables/mikeS64.h"	/* right channel wavetable */ 
 
 class MorphMagusPatch : public MonochromeScreenPatch {
 	VoltsPerOctave hzL;
@@ -24,15 +24,17 @@ private:
   
 public:
   MorphMagusPatch() {																																
-	FloatArray bankL(alien42[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);																																
-	FloatArray bankR(additive42[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);
+	FloatArray bankL(spectral64[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);																																
+	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);
 	WTFactory *wtf = new WTFactory();
 
 	morphL = new OscSelector();
 	morphR = new OscSelector();
 	for (int i ; i<NOF_OSC ; i++)  {
-	morphL->setWaveTables(wtf, bankL, baseFrequency, i);
-	morphR->setWaveTables(wtf, bankR, baseFrequency, i);
+	morphL->setWaveTables(wtf, bankL, baseFrequency, i);	
+	//bankL.destroy(bankL);																															
+	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);
+	morphR->setWaveTables(wtf, bankL, baseFrequency, i); 			// has to take bankR for L/R indepedant wavetables
 	}
 	
 // Morhp oscilator Left
