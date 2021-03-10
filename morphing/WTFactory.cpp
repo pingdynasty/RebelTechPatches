@@ -43,7 +43,7 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 		fft.setMagnitude(zeros, fftoffs, (fft.getSize())-fftoffs);
 		tmp.copyFrom(fft);
 		fourier->ifft(tmp, dest);
-		ret = osc->addWaveTable(dest.getSize(), dest.getData(), topFreq, WFid, NOF_SAMPLES);
+		ret = osc->addWaveTable(dest.getSize(), dest.getData(), topFreq, WFid, NOF_Y_WF);
 		topFreq *= 2.0;
 		
 	}
@@ -58,7 +58,7 @@ void WTFactory::makeMatrix(MorphOsc *osc, FloatArray fullsample, float baseFrequ
 	
 	FloatArray tempsample;
 	
-	for (int WFid=0 ; WFid<NOF_SAMPLES ; WFid++) {
+	for (int WFid=0 ; WFid<NOF_Y_WF ; WFid++) {
 	tempsample = fullsample.subArray(WFid*SAMPLE_LEN, SAMPLE_LEN);
 	makeWaveTable(osc, tempsample, baseFrequency, WFid);
 	} 

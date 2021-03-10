@@ -19,12 +19,12 @@ private:
   
 public:
   DualMorphing2DPatch() {																																
-	FloatArray bank(spectral64[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);
+	FloatArray bank(spectral64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
 	WTFactory *wtf = new WTFactory();
 
 	morph1 = new OscSelector();
 	morph2 = new OscSelector();
-	for (int i ; i<NOF_OSC ; i++)  {
+	for (int i ; i<NOF_X_WF ; i++)  {
 	morph1->setWaveTables(wtf, bank, baseFrequency, i);
 	morph2->setWaveTables(wtf, bank, baseFrequency, i);
 	}
@@ -45,10 +45,10 @@ public:
     float morphD = getParameterValue(PARAMETER_D); 
     
     morph1->setMorphY(morphD);
-    morph1->setFrequency(freqA/sampleRate);
+    morph1->setFrequency(freqA);
     morph1->setMorphX(morphC);
     morph2->setMorphY(morphD);
-    morph2->setFrequency(1.33484*freqA/sampleRate);
+    morph2->setFrequency(1.33484*freqA);
     morph2->setMorphX(morphC+0.04);
     amp = getParameterValue(PARAMETER_B);
     

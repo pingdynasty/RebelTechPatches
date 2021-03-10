@@ -24,16 +24,16 @@ private:
   
 public:
   MorphMagusPatch() {																																
-	FloatArray bankL(spectral64[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);																																
-	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);
+	FloatArray bankL(spectral64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);																																
+	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
 	WTFactory *wtf = new WTFactory();
 
 	morphL = new OscSelector();
 	morphR = new OscSelector();
-	for (int i ; i<NOF_OSC ; i++)  {
+	for (int i ; i<NOF_X_WF ; i++)  {
 	morphL->setWaveTables(wtf, bankL, baseFrequency, i);	
 	//bankL.destroy(bankL);																															
-	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_SAMPLES*NOF_OSC);
+	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
 	morphR->setWaveTables(wtf, bankL, baseFrequency, i); 			// has to take bankR for L/R indepedant wavetables
 	}
 	
@@ -80,8 +80,11 @@ public:
     //setParameterValue(PARAMETER_BD, 0.4);
     
 ;  }
+~MorphMagusPatch(){
+  }
   void processAudio(AudioBuffer &buffer) {
     
+    float gain = 0.1;
     float npast;
     float FML = getParameterValue(PARAMETER_B);
     float FMR = getParameterValue(PARAMETER_D);
@@ -104,12 +107,12 @@ public:
     
     morphL->setMorphY(morphYL);					// always set Y before X
     for(int n = 0; n<buffer.getSize(); n++){
-    morphL->setFrequency((freqL+right[n]*FML*freqL/2)/sampleRate);
+    morphL->setFrequency(freqL+right[n]/gain*FML*freqL/2);
 	}
     morphL->setMorphX(morphXL);
     morphR->setMorphY(morphYR);
     for(int n = 0; n<buffer.getSize(); n++){
-    morphR->setFrequency((freqR+right[n]*FMR*freqR/2)/sampleRate);
+    morphR->setFrequency(freqR+right[n]/gain*FMR*freqR/2);
 	}
     morphR->setMorphX(morphXR);
     
@@ -137,8 +140,8 @@ public:
     
     for(int n = 0; n<buffer.getSize(); n++){
 	
-	left[n] = (morphL->get2DOutput()) * 0.1;
-	right[n] = morphR->get2DOutput() * 0.1;	
+	left[n] = (morphL->get2DOutput()) * gain;
+	right[n] = morphR->get2DOutput() * gain;	
     morphL->updatePhases();				
     morphR->updatePhases();
     //leftright[n] = left[n];

@@ -87,7 +87,7 @@ float MorphOsc::getMorphOutput() {
     this->numWaveTables = (this->totalWaves) / (this->numWaveForms);
 
     int waveTableIdx = 0;
-    waveTableIdx = ((int) (this->morphor * this->numWaveForms)) * ((this->numWaveTables));
+    waveTableIdx = ((int) (this->morphSel * this->numWaveForms)) * ((this->numWaveTables));
     while (((this->phaseInc >= this->WaveTables[waveTableIdx].topFreq)) && (waveTableIdx < (this->totalWaves - 1))) {
         ++waveTableIdx;
     }
@@ -101,7 +101,7 @@ float MorphOsc::getMorphOutput() {
 
 
     // linear interpolation
-    float temp = (this->morphor) * (this->numWaveForms); 
+    float temp = (this->morphSel) * (this->numWaveForms); 
     int intPart = temp;
     float fracPart = temp - intPart;
     down *= (1.0 - fracPart);

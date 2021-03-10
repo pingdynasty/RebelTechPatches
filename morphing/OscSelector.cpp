@@ -1,7 +1,7 @@
 #include "OscSelector.h"
 
 OscSelector::OscSelector(void) {										
-   for (int i = 0 ; i<NOF_OSC ; i++)  {
+   for (int i = 0 ; i<NOF_X_WF ; i++)  {
 		oscs[i] = new MorphOsc();
 	}	
 	down = oscs[0];
@@ -16,19 +16,19 @@ OscSelector::~OscSelector(void) {
 
 
 void OscSelector::setWaveTables(WTFactory *wtf, FloatArray banks, float baseFrequency, int Idx)  { 
-		FloatArray bank = banks.subArray(Idx*SAMPLE_LEN*NOF_SAMPLES, SAMPLE_LEN*NOF_SAMPLES);
+		FloatArray bank = banks.subArray(Idx*SAMPLE_LEN*NOF_Y_WF, SAMPLE_LEN*NOF_Y_WF);
 		wtf->makeMatrix(oscs[Idx], bank, baseFrequency);
     
 }
 
 void OscSelector::setMorphY(float morphY){
-	float temp = morphY * NOF_OSC;
+	float temp = morphY * NOF_X_WF;
     int intPart = temp;
     mix = temp - intPart;
     
     down = oscs[intPart];
     intPart++;
-	if (intPart >= NOF_OSC) {
+	if (intPart >= NOF_X_WF) {
         intPart = 0 ;
 	}
 	up = oscs[intPart];

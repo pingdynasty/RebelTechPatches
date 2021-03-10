@@ -7,7 +7,7 @@
 
 class OscSelector {
 private:
-	MorphOsc *oscs[NOF_OSC];
+	MorphOsc *oscs[NOF_X_WF];
 	MorphOsc* down;
 	MorphOsc* up;
 	float mix;
