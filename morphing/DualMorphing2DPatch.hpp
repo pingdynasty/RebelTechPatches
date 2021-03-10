@@ -31,8 +31,8 @@ public:
 
 	  registerParameter(PARAMETER_A, "Frequency");
 	  registerParameter(PARAMETER_B, "Amp");
-	  registerParameter(PARAMETER_C, "Filter");
-	  registerParameter(PARAMETER_D, "Q");
+	  registerParameter(PARAMETER_C, "morphX");
+	  registerParameter(PARAMETER_D, "morphY");
 ;  }
   void processAudio(AudioBuffer &buffer) {
     
