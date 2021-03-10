@@ -6,7 +6,7 @@
 
 #define baseFrequency (20)  /* starting frequency of first table */  // c1 = 32.7 Hz
 
-#include "spectral16384.h"
+#include "morphing/wavetables/spectral64.h"
 
 class DualMorphing2DPatch : public Patch {
 	VoltsPerOctave hz;
