@@ -1,7 +1,8 @@
 #ifndef __DualMorphing2DPatch_hpp__
 #define __DualMorphing2DPatch_hpp__
 
-#include "OscSelector.h"
+#include "WTFactory.h"
+//#include "MorphOsc.h"
 #include "VoltsPerOctave.h"
 
 #define baseFrequency (20)  /* starting frequency of first table */  // c1 = 32.7 Hz
@@ -11,8 +12,8 @@
 class DualMorphing2DPatch : public Patch {
 	VoltsPerOctave hz;
 private:
-  OscSelector *morph1;
-  OscSelector *morph2;
+  MorphOsc *morph1;
+  MorphOsc *morph2;
   
   SmoothFloat freqA;
   SmoothFloat amp;
@@ -22,12 +23,11 @@ public:
 	FloatArray bank(spectral64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
 	WTFactory *wtf = new WTFactory();
 
-	morph1 = new OscSelector();
-	morph2 = new OscSelector();
-	for (int i ; i<NOF_X_WF ; i++)  {
-	morph1->setWaveTables(wtf, bank, baseFrequency, i);
-	morph2->setWaveTables(wtf, bank, baseFrequency, i);
-	}
+	morph1 = new MorphOsc();
+	morph2 = new MorphOsc();
+	
+	wtf->makeMatrix(morph1, bank, baseFrequency);
+	wtf->makeMatrix(morph2, bank, baseFrequency);
 
 	  registerParameter(PARAMETER_A, "Frequency");
 	  registerParameter(PARAMETER_B, "Amp");
@@ -54,10 +54,10 @@ public:
     
     for(int n = 0; n<buffer.getSize(); n++){
 	
-	left[n] = morph1->get2DOutput() * amp * 0.25;
-	right[n] = morph2->get2DOutput() * amp * 0.25;				
-    morph1->updatePhases();				
-    morph2->updatePhases();
+	left[n] = morph1->getMorphOutput() * amp * 0.25;
+	right[n] = morph2->getMorphOutput() * amp * 0.25;				
+    morph1->updatePhase();				
+    morph2->updatePhase();
 		
 	}
 	}

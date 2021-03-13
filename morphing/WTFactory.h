@@ -37,6 +37,6 @@ class WTFactory {
 }
 	
 	int calccycles (int WTlen, int fulllen);
-	int makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequency, int WFid);
+	int makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequency, int WFidX, int WFidY);
 	void makeMatrix(MorphOsc *osc, FloatArray fullsample, float baseFrequency);
 	}; 

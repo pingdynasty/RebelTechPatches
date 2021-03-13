@@ -2,7 +2,8 @@
 #define __MorphMagusPatch_hpp__
 
 #include "MonochromeScreenPatch.h"
-#include "OscSelector.h"
+#include "WTFactory.h"
+//#include "MorphOsc.h"
 #include "VoltsPerOctave.h"
 #include "MonochromeAudioDisplay.hpp"
 
@@ -14,8 +15,8 @@
 class MorphMagusPatch : public MonochromeScreenPatch {
 	VoltsPerOctave hzL;
 private:
-  OscSelector *morphL;
-  OscSelector *morphR;
+  MorphOsc *morphL;
+  MorphOsc *morphR;
   
   SmoothFloat freqL;
   float FML;
@@ -28,14 +29,14 @@ public:
 	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
 	WTFactory *wtf = new WTFactory();
 
-	morphL = new OscSelector();
-	morphR = new OscSelector();
-	for (int i ; i<NOF_X_WF ; i++)  {
-	morphL->setWaveTables(wtf, bankL, baseFrequency, i);	
+	morphL = new MorphOsc();
+	morphR = new MorphOsc();
+	wtf->makeMatrix(morphL, bankL, baseFrequency);
+	//morphL->setWaveTables(wtf, bankL, baseFrequency);	
 	//bankL.destroy(bankL);																															
 	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
-	morphR->setWaveTables(wtf, bankL, baseFrequency, i); 			// has to take bankR for L/R indepedant wavetables
-	}
+	wtf->makeMatrix(morphR, bankL, baseFrequency);				// has to take bankR for L/R different wavetables
+	
 	
 // Morhp oscilator Left
 	  registerParameter(PARAMETER_A, "TuneL");
@@ -140,12 +141,10 @@ public:
     
     for(int n = 0; n<buffer.getSize(); n++){
 	
-	left[n] = (morphL->get2DOutput()) * gain;
-	right[n] = morphR->get2DOutput() * gain;	
-    morphL->updatePhases();				
-    morphR->updatePhases();
-    //leftright[n] = left[n];
-    //leftright[n+buffer.getSize()] = right[n];
+	left[n] = (morphL->getMorphOutput()) * gain;
+	right[n] = morphR->getMorphOutput() * gain;	
+    morphL->updatePhase();				
+    morphR->updatePhase();
 		
 	}    
 	

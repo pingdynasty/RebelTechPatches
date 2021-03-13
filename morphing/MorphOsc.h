@@ -1,6 +1,8 @@
 #include "message.h"
 #include "Patch.h"
 
+//#include "WTFactory.h"
+
 
 
 #ifndef Test_WaveTableOsc_h
@@ -16,14 +18,15 @@
 #define NOF_X_WF 8
 //#define NOF_SAMPLES 8
 #define NOF_Y_WF 8
-#define NOF_BandLimWT 7
+#define NOF_BandLimWF 7
 
-const int numWaveTableSlots = NOF_BandLimWT*NOF_Y_WF + 2;
+const int numWaveTableSlots = NOF_BandLimWF*NOF_Y_WF*NOF_X_WF + 2;
 
 typedef struct {
     float topFreq;
     int waveTableLen;
-    int waveformid;
+    int waveformidX;
+    int waveformidY;
     float *waveTable;
 } waveTable;
 
@@ -32,25 +35,30 @@ private:
     float phasor;      // phase accumulator
     float phaseInc;    // phase increment
     float phaseOfs;    // phase offset for PWM
-    float morphSel;
+    float morphSelX;
+    float morphSelY;
     float morphInc;
 	//float morphOfs;  // in order to put offset between two ext
     
     // list of wavetables
 public:
     int totalWaves;
+    int totalSlotsY;
     waveTable WaveTables[numWaveTableSlots];
-    int numWaveForms;
-    int numWaveTables;
+    int numYaxisWaveForms;
+    int numXaxisWaveForms;
+    int numBLWaveForms;
 
     MorphOsc(void);
     ~MorphOsc(void);
     void setFrequency(float pinc);
     void setPhaseOffset(float poffset);
     void updatePhase(void);
-	void setMorphing(float minc);
-    //void setMorphOffset(float moffset);
-    int addWaveTable(int len, float *waveTableIn, float topFreq, int WFid, int numcycles);
+	void setMorphX(float mPos);
+	void setMorphY(float mPos);
+    //void setMorphOffset(float moffset);	
+    //void setWaveTables(WTFactory *wtf, FloatArray banks, float baseFrequency);
+    int addWaveTable(int len, float *waveTableIn, float topFreq, int WFidX, int WFidY, int numcycles); // numcycles mandatory here ?
     
     float getMorphOutput();
 	float getOutputAtIndex(int waveTableIdx);
@@ -91,10 +99,17 @@ inline void MorphOsc::updatePhase() {
 }
 
 
-inline void MorphOsc::setMorphing(float mposition) {
-    morphSel = mposition;
-    if (morphSel >= 1.0)
-    morphSel -= 1.0;	
+inline void MorphOsc::setMorphX(float positionX) {
+    morphSelX = positionX;
+    if (morphSelX >= 1.0)
+    morphSelX -= 1.0;	
+}
+
+
+inline void MorphOsc::setMorphY(float positionY) {
+    morphSelY = positionY;
+    if (morphSelY >= 1.0)
+    morphSelY -= 1.0;	
 }
 
 
@@ -104,7 +119,9 @@ inline void MorphOsc::setMorphing(float mposition) {
 
 inline int MorphOsc::getInferiorIndex() {			// only for debuging purpose
 	int waveTableIdx = 0;
-    waveTableIdx = ((int) (this->morphSel * this->numWaveForms)) * ((this->numWaveTables));
+    int temPos = 0;
+    temPos = ((int) (this->morphSelX * this->numXaxisWaveForms)) * this->numYaxisWaveForms * this->numBLWaveForms; 	// go to position of low frequency first Y axis WF
+    waveTableIdx = temPos + (((int) (this->morphSelY * this->numYaxisWaveForms)) * this->numBLWaveForms);							// go to position of low frequency wanted WF
     while (((this->phaseInc >= this->WaveTables[waveTableIdx].topFreq)) && (waveTableIdx < (this->totalWaves - 1))) {
         ++waveTableIdx;
     }

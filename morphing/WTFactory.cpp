@@ -18,7 +18,7 @@ int WTFactory::calccycles(int WTlen, int fulllen) {
 }
 	
     
-int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequency, int WFid)     {
+int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequency, int WFidX, int WFidY)     {
 	
 	
 	fft.clear();
@@ -38,12 +38,12 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	
 	
 
-	for (int i=0; i<(NOF_BandLimWT); i++)  {
+	for (int i=0; i<(NOF_BandLimWF); i++)  {
 		fftoffs /= 2;
 		fft.setMagnitude(zeros, fftoffs, (fft.getSize())-fftoffs);
 		tmp.copyFrom(fft);
 		fourier->ifft(tmp, dest);
-		ret = osc->addWaveTable(dest.getSize(), dest.getData(), topFreq, WFid, NOF_Y_WF);
+		ret = osc->addWaveTable(dest.getSize(), dest.getData(), topFreq, WFidX, WFidY, NOF_Y_WF);
 		topFreq *= 2.0;
 		
 	}
@@ -54,13 +54,17 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 
 
 
-void WTFactory::makeMatrix(MorphOsc *osc, FloatArray fullsample, float baseFrequency)     {
+void WTFactory::makeMatrix(MorphOsc *osc, FloatArray bank, float baseFrequency)     {
 	
 	FloatArray tempsample;
 	
-	for (int WFid=0 ; WFid<NOF_Y_WF ; WFid++) {
-	tempsample = fullsample.subArray(WFid*SAMPLE_LEN, SAMPLE_LEN);
-	makeWaveTable(osc, tempsample, baseFrequency, WFid);
-	} 
+	for (int WFidX=0 ; WFidX<NOF_X_WF ; WFidX++) 					// X and Y switchable here
+	{
+		for (int WFidY=0 ; WFidY<NOF_Y_WF ; WFidY++) 
+		{
+			tempsample = bank.subArray((WFidX*NOF_Y_WF + WFidY)*SAMPLE_LEN, SAMPLE_LEN);
+			makeWaveTable(osc, tempsample, baseFrequency, WFidX, WFidY);
+		} 
+	}
     //return 0;
 }

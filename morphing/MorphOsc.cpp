@@ -4,12 +4,16 @@ MorphOsc::MorphOsc(void) {
     phasor = 0.0;
     phaseInc = 0.0;
     phaseOfs = 0.5;
+    totalSlotsY = 0;
     totalWaves = 0;
-    numWaveForms = 0;
+    numYaxisWaveForms = 0;
+    numXaxisWaveForms = NOF_X_WF;
+    numBLWaveForms = 0;
     for (int idx = 0; idx < numWaveTableSlots; idx++) {    				// numWaveTableSlots = maximum arbitraire (> vrai max)
         WaveTables[idx].topFreq = 0;
         WaveTables[idx].waveTableLen = 0;
-        WaveTables[idx].waveformid = 0;
+        WaveTables[idx].waveformidX = 0;
+        WaveTables[idx].waveformidY = 0;
         WaveTables[idx].waveTable = 0;
     }
 }
@@ -24,6 +28,11 @@ MorphOsc::~MorphOsc(void) {
 }
 
 
+//void MorphOsc::setWaveTables(WTFactory *wtf, FloatArray banks, float baseFrequency)  { 
+		////FloatArray bank = banks.subArray(Idx*SAMPLE_LEN*NOF_Y_WF, SAMPLE_LEN*NOF_Y_WF);
+		//wtf->makeMatrix(bank, baseFrequency);
+    
+//}
 
 
 // addWaveTable
@@ -32,19 +41,22 @@ MorphOsc::~MorphOsc(void) {
 // topFreq is the highest frequency supported by a wavetable
 // wavetables within an oscillator can be different lengths
 //
-// returns 0 upon success, or the number of wavetables if no more room is available
-//
-int MorphOsc::addWaveTable(int len, float *waveTableIn, float topFreq, int WFid, int numcycles) {   				//double topFreq
+int MorphOsc::addWaveTable(int len, float *waveTableIn, float topFreq, int WFidX, int WFidY, int numYWF) {   				//double topFreq
     	
     	
-    this->numWaveForms = numcycles;
+    this->numYaxisWaveForms = numYWF;
     	
     if (this->totalWaves < numWaveTableSlots) {
         float *waveTable = this->WaveTables[this->totalWaves].waveTable = new float[len];
       //  this->WaveTables[this->totalWaves].waveTable = waveTableIn; // new float[len];
         this->WaveTables[this->totalWaves].waveTableLen = len;
         this->WaveTables[this->totalWaves].topFreq = topFreq;
-        this->WaveTables[this->totalWaves].waveformid = WFid;
+        this->WaveTables[this->totalWaves].waveformidX = WFidX;
+        this->WaveTables[this->totalWaves].waveformidY = WFidY;
+        if (this->totalWaves % this->numYaxisWaveForms == 0)
+        {
+			++this->totalSlotsY;
+		}
         ++this->totalWaves;
         
         // fill in wave
@@ -54,13 +66,13 @@ int MorphOsc::addWaveTable(int len, float *waveTableIn, float topFreq, int WFid,
         
         return 0;
     }
-    return this->numWaveForms;
+    return this->totalWaves;
 }
 
 //
-// getOutput
+// getOutputAtIndex
 //
-// returns the current oscillator output
+// returns the current waveform oscillator output
 //
 float MorphOsc::getOutputAtIndex(int waveTableIdx) {
     waveTable *waveTable = &this->WaveTables[waveTableIdx];
@@ -84,27 +96,47 @@ float MorphOsc::getOutputAtIndex(int waveTableIdx) {
 float MorphOsc::getMorphOutput() {
     // grab the appropriate extWF and then BL
 
-    this->numWaveTables = (this->totalWaves) / (this->numWaveForms);
+    this->numBLWaveForms = (this->totalWaves) / ((this->numYaxisWaveForms)*(this->numXaxisWaveForms));
 
     int waveTableIdx = 0;
-    waveTableIdx = ((int) (this->morphSel * this->numWaveForms)) * ((this->numWaveTables));
+    int temPos = 0;
+    temPos = ((int) (this->morphSelX * this->numXaxisWaveForms)) * this->numYaxisWaveForms * this->numBLWaveForms; 	// go to position of low frequency first Y axis WF
+    waveTableIdx = temPos + (((int) (this->morphSelY * this->numYaxisWaveForms)) * this->numBLWaveForms);							// go to position of low frequency wanted WF
     while (((this->phaseInc >= this->WaveTables[waveTableIdx].topFreq)) && (waveTableIdx < (this->totalWaves - 1))) {
         ++waveTableIdx;
     }
     
-    float down = getOutputAtIndex(waveTableIdx);
-    waveTableIdx += this->numWaveTables;
-    if(waveTableIdx >= this->totalWaves)  {
-		waveTableIdx -= this->totalWaves;
+    float downXdownY = getOutputAtIndex(waveTableIdx);
+    waveTableIdx += this->numBLWaveForms;
+    if(waveTableIdx >= temPos + this->numYaxisWaveForms * this->numBLWaveForms)  {
+		waveTableIdx -= (this->numYaxisWaveForms * this->numBLWaveForms);		// mirroring first to last Y axis WF
 	}
-    float up = getOutputAtIndex(waveTableIdx);
+    float downXupY = getOutputAtIndex(waveTableIdx);
+    waveTableIdx += this->numYaxisWaveForms * this->numBLWaveForms;
+    if(waveTableIdx >= this->numXaxisWaveForms * this->numYaxisWaveForms * this->numBLWaveForms)  {
+		waveTableIdx -= this->numXaxisWaveForms * this->numYaxisWaveForms * this->numBLWaveForms;		// mirroring first to last X axis WF
+	}
+    float upXupY = getOutputAtIndex(waveTableIdx);
+    waveTableIdx -= this->numBLWaveForms;
+    if(waveTableIdx < 0)  {
+		waveTableIdx += this->numYaxisWaveForms * this->numBLWaveForms;		// mirroring first to last Y axis WF
+	}
+    float upXdownY = getOutputAtIndex(waveTableIdx);
 
 
     // linear interpolation
-    float temp = (this->morphSel) * (this->numWaveForms); 
+    float temp = (this->morphSelY) * (this->numYaxisWaveForms); 
     int intPart = temp;
     float fracPart = temp - intPart;
-    down *= (1.0 - fracPart);
-    up *= fracPart;
-    return down + up ; 
+    downXdownY *= (1.0 - fracPart);
+    upXdownY *= (1.0 - fracPart);
+    downXupY *= fracPart;
+    upXupY *= fracPart;
+    temp = (this->morphSelX) * (this->numXaxisWaveForms); 
+    intPart = temp;
+    fracPart = temp - intPart;
+    //(downXdownY + downXupY) *= (1.0 - fracPart);
+    //(upXdownY + upXupY) *= fracPart;
+    return ((downXdownY + downXupY) * (1.0 - fracPart) + (upXdownY + upXupY) * fracPart)/2 ;
 }
+
