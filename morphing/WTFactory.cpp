@@ -23,33 +23,49 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	
 	fft.clear();
     dest.clear();
+    dest128.clear();
+    dest64.clear();
     zeros.clear();
     
 
 	dest.copyFrom(sample);
 	
 	fourier->fft(dest, fft);
-	int fftoffs = fft.getSize();
+	int fftOffs = fft.getSize();
 	
 	int ret;
 	
 
-	float topFreq = baseFrequency * 16.0 /sampleRate;
+	float topFrequency = baseFrequency * 11.0 /sampleRate;
 	
-	
-
-	for (int i=0; i<(NOF_BandLimWF); i++)  {
-		fftoffs /= 2;
-		fft.setMagnitude(zeros, fftoffs, (fft.getSize())-fftoffs);
-		tmp.copyFrom(fft);
-		fourier->ifft(tmp, dest);
-		ret = osc->addWaveTable(dest.getSize(), dest.getData(), topFreq, WFidX, WFidY, NOF_Y_WF);
-		topFreq *= 2.0;
+	// adding wave from the bank
+	osc->addWaveTable(sample.getSize(), sample.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);	
 		
-	}
+	// adding half fft wave
+	topFrequency *= 2.0;
+	fftOffs /= 2;
+	tmp128.copyFrom(fft.subArray(0,fftOffs-1));
+	fourier128->ifft(tmp128, dest128);
+	osc->addWaveTable(dest128.getSize(), dest128.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);	
+		
+	// adding quarter fft wave 
+	topFrequency *= 2.0;
+	fftOffs /= 2;
+	tmp64.copyFrom(fft.subArray(0,fftOffs-1));
+	fourier64->ifft(tmp64, dest64);
+	osc->addWaveTable(dest64.getSize(), dest64.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);
 	
+	// adding high end wave 	
+	while (topFrequency < 14000.0/sampleRate)	{   // must be < 20Khz for full spectrum
+		topFrequency *= 2.0;
+		fftOffs /= 2;
+		fft.setMagnitude(zeros, fftOffs, (fft.getSize())-fftOffs);
+		tmp64.copyFrom(fft.subArray(0,fftOffs));
+		fourier64->ifft(tmp, dest64);
+		osc->addWaveTable(dest64.getSize(), dest64.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);
+	}
 
-	return 0;
+	return topFrequency*sampleRate;
 }
 
 
