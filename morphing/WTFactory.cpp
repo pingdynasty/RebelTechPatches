@@ -32,6 +32,7 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	
 	fourier->fft(dest, fft);
 	int fftOffs = fft.getSize();
+	int step = 0;
 	
 	int ret;
 	
@@ -47,9 +48,10 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	fft.setMagnitude(zeros, fftOffs, (fft.getSize())-fftOffs);
 	tmp.copyFrom(fft);
 	fourier->ifft(tmp, dest);
+	step = fft.getSize()/fftOffs;
 	for (int i=0; i<fftOffs; i++)
 	{
-		dest128.setElement(i, dest.getElement(fft.getSize()/fftOffs*i));
+		dest128.setElement(i, dest.getElement(step*i));
 	}
 	osc->addWaveTable(dest128.getSize(), dest128.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);	
 		
@@ -59,9 +61,10 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	fft.setMagnitude(zeros, fftOffs, (fft.getSize())-fftOffs);
 	tmp.copyFrom(fft);
 	fourier->ifft(tmp, dest);
+	step = fft.getSize()/fftOffs;
 	for (int i=0; i<fftOffs; i++)
 	{
-		dest64.setElement(i, dest.getElement(fft.getSize()/fftOffs*i));
+		dest64.setElement(i, dest.getElement(step*i));
 	}
 	osc->addWaveTable(dest64.getSize(), dest64.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);
 	
@@ -72,9 +75,9 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 		fft.setMagnitude(zeros, fftOffs, (fft.getSize())-fftOffs);
 		tmp.copyFrom(fft);
 		fourier->ifft(tmp, dest);
-		for (int i=0; i<fftOffs; i++)
+		for (int i=0; i<(fft.getSize()/step); i++)
 		{
-			dest64.setElement(i, dest.getElement(fft.getSize()/fftOffs*i));
+			dest64.setElement(i, dest.getElement(step*i));
 		}
 		osc->addWaveTable(dest64.getSize(), dest64.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);
 	}
