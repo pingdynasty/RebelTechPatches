@@ -22,10 +22,14 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	
 	
 	fft.clear();
+	fft128.clear();
+	fft64.clear();
     dest.clear();
     dest128.clear();
     dest64.clear();
     zeros.clear();
+    zeros128.clear();
+    zeros64.clear();
     
 
 	dest.copyFrom(sample);
@@ -45,40 +49,43 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	// adding half fft wave
 	topFrequency *= 2.0;
 	fftOffs /= 2;
-	fft.setMagnitude(zeros, fftOffs, (fft.getSize())-fftOffs);
-	tmp.copyFrom(fft);
-	fourier->ifft(tmp, dest);
 	step = fft.getSize()/fftOffs;
 	for (int i=0; i<fftOffs; i++)
 	{
-		dest128.setElement(i, dest.getElement(step*i));
+		dest128.setElement(i, sample.getElement(step*i));
 	}
+	fourier128->fft(dest128, fft128);
+	fft128.setMagnitude(zeros128 , fftOffs/2, (fft128.getSize())-fftOffs/2);
+	tmp128.copyFrom(fft128);
+	fourier128->ifft(tmp128, dest128);
 	osc->addWaveTable(dest128.getSize(), dest128.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);	
 		
 	// adding quarter fft wave 
 	topFrequency *= 2.0;
 	fftOffs /= 2;
-	fft.setMagnitude(zeros, fftOffs, (fft.getSize())-fftOffs);
-	tmp.copyFrom(fft);
-	fourier->ifft(tmp, dest);
 	step = fft.getSize()/fftOffs;
 	for (int i=0; i<fftOffs; i++)
 	{
-		dest64.setElement(i, dest.getElement(step*i));
+		dest64.setElement(i, sample.getElement(step*i));
 	}
+	fourier64->fft(dest64, fft64);
+	fft64.setMagnitude(zeros64, fftOffs/2, (fft64.getSize())-fftOffs/2);
+	tmp64.copyFrom(fft64);
+	fourier64->ifft(tmp64, dest64);
 	osc->addWaveTable(dest64.getSize(), dest64.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);
 	
 	// adding high end wave 	
 	while (topFrequency < 14000.0/sampleRate)	{   // must be < 20Khz for full spectrum
 		topFrequency *= 2.0;
 		fftOffs /= 2;
-		fft.setMagnitude(zeros, fftOffs, (fft.getSize())-fftOffs);
-		tmp.copyFrom(fft);
-		fourier->ifft(tmp, dest);
 		for (int i=0; i<(fft.getSize()/step); i++)
 		{
-			dest64.setElement(i, dest.getElement(step*i));
+			dest64.setElement(i, sample.getElement(step*i));
 		}
+		fourier64->fft(dest64, fft64);
+		fft64.setMagnitude(zeros64, fftOffs/2, (fft64.getSize())-fftOffs/2);
+		tmp64.copyFrom(fft64);
+		fourier64->ifft(tmp64, dest64);
 		osc->addWaveTable(dest64.getSize(), dest64.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);
 	}
 
