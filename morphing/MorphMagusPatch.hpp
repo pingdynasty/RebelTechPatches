@@ -168,7 +168,7 @@ public:
     static float phase = 0;
     if (ratem1 != rate)  {
 		phase = 2*M_PI * (lfo1 - tempo * rate * getBlockSize() / getSampleRate());		// phase sync with lfo1 when switching sine rate
-	}
+	}																					// TO DO : wait for the phase to sync when switching
     //amount = 0.3;
         phase += 2*M_PI * rate * tempo * getBlockSize() / getSampleRate();
         if(phase >= 2*M_PI)
