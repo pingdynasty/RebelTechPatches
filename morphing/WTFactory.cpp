@@ -41,7 +41,7 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	int ret;
 	
 
-	float topFrequency = baseFrequency * 11.0 /sampleRate;
+	float topFrequency = baseFrequency * 9.0 /sampleRate;
 	
 	// adding wave from the bank
 	osc->addWaveTable(sample.getSize(), sample.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);	
@@ -75,7 +75,7 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	osc->addWaveTable(dest64.getSize(), dest64.getData(), topFrequency, WFidX, WFidY, NOF_Y_WF);
 	
 	// adding high end wave 	
-	while (topFrequency < 14000.0/sampleRate)	{   // must be < 20Khz for full spectrum
+	while (topFrequency < 10000.0/sampleRate)	{   // must be < 20Khz for full spectrum but needs more BL wave
 		topFrequency *= 2.0;
 		fftOffs /= 2;
 		for (int i=0; i<(fft.getSize()/step); i++)
