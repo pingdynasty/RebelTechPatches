@@ -1,10 +1,10 @@
+#include "WTFactory.h"
 #include "MorphOsc.h"
 
 MorphOsc::MorphOsc(void) {										
     phasor = 0.0;
     phaseInc = 0.0;
     phaseOfs = 0.5;
-    totalSlotsY = 0;
     totalWaves = 0;
     numYaxisWaveForms = 0;
     numXaxisWaveForms = NOF_X_WF;
@@ -53,10 +53,6 @@ int MorphOsc::addWaveTable(int len, float *waveTableIn, float topFreq, int WFidX
         this->WaveTables[this->totalWaves].topFreq = topFreq;
         this->WaveTables[this->totalWaves].waveformidX = WFidX;
         this->WaveTables[this->totalWaves].waveformidY = WFidY;
-        if (this->totalWaves % this->numYaxisWaveForms == 0)
-        {
-			++this->totalSlotsY;
-		}
         ++this->totalWaves;
         
         // fill in wave
@@ -64,8 +60,10 @@ int MorphOsc::addWaveTable(int len, float *waveTableIn, float topFreq, int WFidX
             waveTable[idx] = waveTableIn[idx];
         }
         
+	this->numBLWaveForms = (this->totalWaves) / ((this->numYaxisWaveForms)*(this->numXaxisWaveForms));
         return 0;
     }
+
     return this->totalWaves;
 }
 
@@ -75,6 +73,7 @@ int MorphOsc::addWaveTable(int len, float *waveTableIn, float topFreq, int WFidX
 // returns the current waveform oscillator output
 //
 float MorphOsc::getOutputAtIndex(int waveTableIdx) {
+  ASSERT(waveTableIdx < this->totalWaves, "wave table index out of bounds");
     waveTable *waveTable = &this->WaveTables[waveTableIdx];
     
 
@@ -92,11 +91,8 @@ float MorphOsc::getOutputAtIndex(int waveTableIdx) {
 
 }
 
-
 float MorphOsc::getMorphOutput() {
     // grab the appropriate extWF and then BL
-
-    this->numBLWaveForms = (this->totalWaves) / ((this->numYaxisWaveForms)*(this->numXaxisWaveForms));
 
     int waveTableIdx = 0;
     int temPos = 0;
@@ -140,3 +136,15 @@ float MorphOsc::getMorphOutput() {
     return ((downXdownY + downXupY) * (1.0 - fracPart) + (upXdownY + upXupY) * fracPart)/2 ;
 }
 
+
+MorphOsc* MorphOsc::create(FloatArray wavetable, size_t sample_len, float lowestFreq, float sr){
+  WTFactory* wtf = new WTFactory(sample_len);
+  MorphOsc* osc = new MorphOsc();
+  wtf->makeMatrix(osc, wavetable, lowestFreq);
+  delete wtf;
+  return osc;
+}
+
+void MorphOsc::destroy(MorphOsc* obj){
+  delete obj;
+}

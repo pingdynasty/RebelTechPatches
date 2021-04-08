@@ -1,17 +1,10 @@
-#include "message.h"
-#include "Patch.h"
-
-//#include "WTFactory.h"
-
-
+#include "Oscillator.h"
 
 #ifndef Test_WaveTableOsc_h
 #define Test_WaveTableOsc_h
 
 
 //#define c1 (32.7) , c4 (261) 
-
-#define sampleRate 48000
 
 #define SAMPLE_LEN 256
 //#define NOF_OSC 8
@@ -20,7 +13,7 @@
 #define NOF_Y_WF 8
 #define NOF_BandLimWF 7
 
-const int numWaveTableSlots = NOF_BandLimWF*NOF_Y_WF*NOF_X_WF + 2;
+const int numWaveTableSlots = NOF_BandLimWF*NOF_Y_WF*NOF_X_WF;
 
 typedef struct {
     float topFreq;
@@ -30,7 +23,7 @@ typedef struct {
     float *waveTable;
 } waveTable;
 
-class MorphOsc {
+class MorphOsc : public Oscillator {
 private:
     float phasor;      // phase accumulator
     float phaseInc;    // phase increment
@@ -43,7 +36,6 @@ private:
     // list of wavetables
 public:
     int totalWaves;
-    int totalSlotsY;
     waveTable WaveTables[numWaveTableSlots];
     int numYaxisWaveForms;
     int numXaxisWaveForms;
@@ -53,6 +45,10 @@ public:
     ~MorphOsc(void);
     void setFrequency(float pinc);
     void setPhaseOffset(float poffset);
+  virtual void setPhase(float phase){}
+  virtual float getPhase(){
+    return 0;
+  }
     void updatePhase(void);
 	void setMorphX(float mPos);
 	void setMorphY(float mPos);
@@ -64,6 +60,22 @@ public:
 	float getOutputAtIndex(int waveTableIdx);
 	
     int getInferiorIndex();
+    float generate() {
+      float sample = getMorphOutput();    
+      updatePhase();
+      return sample;
+    }
+  float generate(float fm){
+    float sample = getMorphOutput();
+    phasor += fm;
+    updatePhase();
+    return sample;
+  }
+  static MorphOsc* create(FloatArray wavetable, size_t sample_len, float lowestFreq, float sr);
+  static void destroy(MorphOsc* obj);
+private:
+  float sampleRate =  48000;
+
 };
 
 

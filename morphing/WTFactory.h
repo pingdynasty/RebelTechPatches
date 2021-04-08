@@ -1,7 +1,6 @@
 #include "MorphOsc.h"
 
 #include "FastFourierTransform.h"
-#include "Patch.h"
 
 
 
@@ -21,22 +20,25 @@ class WTFactory {
 	
 	
 	
-	WTFactory() {
+  WTFactory(size_t len) {
 		fourier = new FastFourierTransform();
-		fourier->init(SAMPLE_LEN);
-		fft = ComplexFloatArray::create(SAMPLE_LEN);
-		tmp = ComplexFloatArray::create(SAMPLE_LEN);
-		dest = FloatArray::create(SAMPLE_LEN);
-		zeros = FloatArray::create(SAMPLE_LEN);
+		fourier->init(len);
+		fft = ComplexFloatArray::create(len);
+		tmp = ComplexFloatArray::create(len);
+		dest = FloatArray::create(len);
+		zeros = FloatArray::create(len);
 	}
 	~WTFactory(){
 	ComplexFloatArray::destroy(fft);
 	ComplexFloatArray::destroy(tmp);
 	FloatArray::destroy(dest);
 	FloatArray::destroy(zeros);
-}
+	delete fourier;
+	}
 	
 	int calccycles (int WTlen, int fulllen);
 	int makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequency, int WFidX, int WFidY);
 	void makeMatrix(MorphOsc *osc, FloatArray fullsample, float baseFrequency);
-	}; 
+private:
+  float sampleRate =  48000;
+}; 

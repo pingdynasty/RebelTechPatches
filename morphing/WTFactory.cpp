@@ -31,7 +31,7 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 	fourier->fft(dest, fft);
 	int fftoffs = fft.getSize();
 	
-	int ret;
+	int ret = 0;
 	
 
 	float topFreq = baseFrequency * 16.0 /sampleRate;
@@ -48,8 +48,7 @@ int WTFactory::makeWaveTable(MorphOsc *osc, FloatArray sample, float baseFrequen
 		
 	}
 	
-
-	return 0;
+	return ret;
 }
 
 

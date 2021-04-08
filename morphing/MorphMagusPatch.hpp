@@ -9,8 +9,8 @@
 
 #define baseFrequency (20)  /* starting frequency of first table */  // c1 = 32.7 Hz
 
-#include "morphing/wavetables/spectral64.h"		/* left channel wavetable */ 
-#include "morphing/wavetables/mikeS64.h"	/* right channel wavetable */ 
+#include "wavetables/spectral64.h"		/* left channel wavetable */ 
+#include "wavetables/mikeS64.h"	/* right channel wavetable */ 
 
 class MorphMagusPatch : public MonochromeScreenPatch {
 	VoltsPerOctave hzL;
@@ -30,7 +30,7 @@ public:
 	  																													
 	FloatArray bankL(spectral64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);																																
 	//FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
-	WTFactory *wtf = new WTFactory();
+	WTFactory *wtf = new WTFactory(SAMPLE_LEN);
 
 	morphL = new MorphOsc();
 	morphR = new MorphOsc();
@@ -112,7 +112,7 @@ public:
   
     setParameterValue(PARAMETER_BA, 0.0); 
     setParameterValue(PARAMETER_BB, 0.0);
-    setParameterValue(PARAMETER_BC, 0.0);
+    setParameterValue(PARAMETER_BC, 0.8);
     setParameterValue(PARAMETER_BD, 0.5);
   
 ;  }
@@ -232,17 +232,18 @@ public:
     
     for(int n = 0; n<buffer.getSize(); n++){
 		
-    morphL->setFrequency(freqL+right[n]/gain*FML*freqL/2);
+    // morphL->setFrequency(freqL+right[n]/gain*FML*freqL/2);
+    // debugMessage("freq", freqL+right[n]/gain*FML*freqL/2);
+      morphL->setFrequency(getParameterValue(PARAMETER_A)*2000+20);
+    debugMessage("freq", getParameterValue(PARAMETER_A)*2000+20);
 	morphR->setFrequency(freqR+right[n]/gain*FMR*freqR/2);
-	left[n] = (morphL->getMorphOutput()) * gain;
-	right[n] = morphR->getMorphOutput() * gain;	
-    morphL->updatePhase();				
-    morphR->updatePhase();
+	left[n] = (morphL->generate()) * gain;
+	right[n] = morphR->generate() * gain;	
 		
 	}    
 	
     display.update(left, 2, 0.0, 3.0, 0.0);
-    debugMessage("out" , (int)(rate), morphR->getInferiorIndex() )	;	
+    // debugMessage("out" , (int)(rate), morphR->getInferiorIndex() )	;	
 
 	}
 	
