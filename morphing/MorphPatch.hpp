@@ -1,17 +1,31 @@
 #ifndef __MorphPatch_hpp__
 #define __MorphPatch_hpp__
 
-#include "VoltsPerOctave.h"
-
 #include "WTFactory.h"
-
 #include "Envelope.h"
+#include "ShortArray.h"
 #include "Oscillator.h"
 #include "SineOscillator.h"
 #include "TapTempo.hpp"
 static const int TRIGGER_LIMIT = (1<<17);
 
 #define PITCHBEND_RANGE 2
+
+typedef struct {
+    char     chunk_id[4];
+    uint32_t chunk_size;
+    char     format[4];
+    char     fmtchunk_id[4];
+    uint32_t fmtchunk_size;
+    uint16_t audio_format;
+    uint16_t num_channels;
+    uint32_t sample_rate;
+    uint32_t byte_rate;
+    uint16_t block_align;
+    uint16_t bps;
+    char     datachunk_id[4];
+    uint32_t datachunk_size;
+}WavHeader;
 
 class MorphVoice : public SignalGenerator {
   // public Oscillator, Envelope?
@@ -112,14 +126,37 @@ private:
   SineOscillator* lfo2;
   TapTempo<TRIGGER_LIMIT> tempo1;
   TapTempo<TRIGGER_LIMIT> tempo2;
+
+  ShortArray readwav(uint8_t* data){
+    WavHeader* wav_header = (WavHeader*)data;
+    if(strncmp(wav_header->chunk_id, "RIFF", 4) ||
+       strncmp(wav_header->format, "WAVE", 4) ||
+       wav_header->audio_format != 1 ||
+       wav_header->datachunk_size == 0 ||
+       wav_header->fmtchunk_size != 16)
+      error(CONFIGURATION_ERROR_STATUS, "Invalid wav");
+    const int len = wav_header->datachunk_size/(wav_header->fmtchunk_size/8);
+    data += sizeof(WavHeader);
+    return ShortArray((int16_t*)data, len);
+  }
 public:
   MorphPatch() :
     tempo1(getSampleRate()*0.5), tempo2(getSampleRate()*0.25) {
-    resourceL = getResource("wavetable1");
-    resourceR = getResource("wavetable2");
-    FloatArray bankL = resourceL->asFloatArray();
-    FloatArray bankR = resourceR->asFloatArray();
-    debugMessage("l/r", (int)resourceL->asFloatArray().getSize(), resourceR->asFloatArray().getSize());
+    resourceL = getResource("wavetable1.wav");
+    resourceR = getResource("wavetable2.wav");
+
+    ShortArray samples = readwav((uint8_t*)resourceL->getData());
+    FloatArray bankL = FloatArray::create(samples.getSize());
+    samples.toFloat(bankL);
+    samples = readwav((uint8_t*)resourceR->getData());
+    FloatArray bankR = FloatArray::create(samples.getSize());
+    samples.toFloat(bankR);
+
+    debugMessage("l/r", (int)bankL.getSize(), bankR.getSize());
+
+    // FloatArray bankL = resourceL->asFloatArray();
+    // FloatArray bankR = resourceR->asFloatArray();
+    // debugMessage("l/r", (int)resourceL->asFloatArray().getSize(), resourceR->asFloatArray().getSize());
     morphL = MorphVoice::create(bankL, SAMPLE_LEN, 20, getSampleRate());
     morphR = MorphVoice::create(bankR, SAMPLE_LEN, 20, getSampleRate());
     registerParameter(PARAMETER_A, "Frequency");
@@ -133,8 +170,11 @@ public:
     setParameterValue(PARAMETER_D, 0.5);
     setParameterValue(PARAMETER_E, 0.8);
 
+    // lfo
     lfo1 = SineOscillator::create(getSampleRate());
     lfo2 = SineOscillator::create(getSampleRate());
+    registerParameter(PARAMETER_F, "LFO1>");
+    registerParameter(PARAMETER_G, "LFO2>");
   }
 
   ~MorphPatch(){
@@ -232,6 +272,8 @@ public:
     lfo2->setFrequency(rate);
     setParameterValue(PARAMETER_G, lfo2->generate()*0.5+0.5);
     setButton(BUTTON_F, lfo2->getPhase() < M_PI);
+
+    debugMessage("l1/l2", lfo1->getFrequency(), lfo2->getFrequency());
   }
 };
 
