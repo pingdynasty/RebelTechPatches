@@ -5,9 +5,6 @@
 
 #include "WTFactory.h"
 
-#include "wavetables/spectral64.h"		/* left channel wavetable */ 
-#include "wavetables/mikeS64.h"	/* right channel wavetable */ 
-
 #include "Oscillator.h"
 #include "Envelope.h"
 
@@ -91,26 +88,39 @@ class MorphPatch : public Patch {
 private:
   MorphVoice* morphL;
   MorphVoice* morphR;
+  Resource* resourceL;
+  Resource* resourceR;
   int basenote = 60;
+  SmoothFloat x;
+  SmoothFloat y;
 public:
   MorphPatch() {	
-    FloatArray bankL(spectral64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
-    FloatArray bankR(mikeS64[0], SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
+    resourceL = getResource("wavetable1");
+    resourceR = getResource("wavetable2");
+    // FloatArray bankL((float*)resourceL->getData(), SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
+    // FloatArray bankR((float*)resourceR->getData(), SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
+    FloatArray bankL = resourceL->asFloatArray();
+    FloatArray bankR = resourceR->asFloatArray();
+    // debugMessage("l/r", (int)resourceL->asFloatArray().getSize(), resourceR->asFloatArray().getSize());
     morphL = MorphVoice::create(bankL, SAMPLE_LEN, 20, getSampleRate());
-    morphR = MorphVoice::create(bankL, SAMPLE_LEN, 20, getSampleRate());
+    morphR = MorphVoice::create(bankR, SAMPLE_LEN, 20, getSampleRate());
     registerParameter(PARAMETER_A, "Frequency");
     registerParameter(PARAMETER_B, "Morph X");
     registerParameter(PARAMETER_C, "Morph Y");
-    registerParameter(PARAMETER_E, "Envelope");
-    registerParameter(PARAMETER_F, "Gain");
+    registerParameter(PARAMETER_D, "Envelope");
+    registerParameter(PARAMETER_E, "Gain");
     setParameterValue(PARAMETER_A, 0.8);
     setParameterValue(PARAMETER_B, 0.5);
-    setParameterValue(PARAMETER_A, 0.5);
+    setParameterValue(PARAMETER_C, 0.5);
+    setParameterValue(PARAMETER_D, 0.5);
+    setParameterValue(PARAMETER_E, 0.8);
   }
 
   ~MorphPatch(){
     MorphVoice::destroy(morphL);
     MorphVoice::destroy(morphR);
+    Resource::destroy(resourceL);
+    Resource::destroy(resourceR);
   }
 
   void buttonChanged(PatchButtonId bid, uint16_t value, uint16_t samples){
@@ -162,16 +172,16 @@ public:
     
   void processAudio(AudioBuffer &buffer) {
     basenote = getParameterValue(PARAMETER_A)*48+40;
-    float gain = getParameterValue(PARAMETER_E);
-    float morphX = getParameterValue(PARAMETER_B);  
-    float morphY = getParameterValue(PARAMETER_C); 
+    float x = getParameterValue(PARAMETER_B);  
+    float y = getParameterValue(PARAMETER_C); 
     float env = getParameterValue(PARAMETER_D);
+    float gain = getParameterValue(PARAMETER_E);
     morphL->setEnvelope(env*4);
-    morphL->getOscillator()->setMorphY(morphY);
-    morphL->getOscillator()->setMorphX(morphX);
+    morphL->getOscillator()->setMorphY(y);
+    morphL->getOscillator()->setMorphX(x);
     morphR->setEnvelope(env*4);
-    morphR->getOscillator()->setMorphY(morphY);
-    morphR->getOscillator()->setMorphX(morphX);
+    morphR->getOscillator()->setMorphY(y);
+    morphR->getOscillator()->setMorphX(x);
     FloatArray left = buffer.getSamples(LEFT_CHANNEL);
     FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
     morphL->generate(left);

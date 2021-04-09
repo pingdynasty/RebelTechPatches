@@ -1,3 +1,4 @@
+#include "basicmaths.h"
 #include "Oscillator.h"
 
 #ifndef Test_WaveTableOsc_h
@@ -45,9 +46,11 @@ public:
     ~MorphOsc(void);
     void setFrequency(float pinc);
     void setPhaseOffset(float poffset);
-  virtual void setPhase(float phase){}
-  virtual float getPhase(){
-    return 0;
+  void setPhase(float phase){
+    phasor = phase/(2*M_PI);
+  }
+  float getPhase(){
+    return phasor*2*M_PI;
   }
     void updatePhase(void);
 	void setMorphX(float mPos);
