@@ -5,10 +5,13 @@
 
 #include "WTFactory.h"
 
-#include "Oscillator.h"
 #include "Envelope.h"
+#include "Oscillator.h"
+#include "SineOscillator.h"
+#include "TapTempo.hpp"
+static const int TRIGGER_LIMIT = (1<<17);
 
-#define PITCHBEND_RANGE 24
+#define PITCHBEND_RANGE 2
 
 class MorphVoice : public SignalGenerator {
   // public Oscillator, Envelope?
@@ -16,6 +19,7 @@ private:
   MorphOsc* osc;
   AdsrEnvelope* env;
   float pb = 0.0f;
+  uint8_t note = 60;
 public:
   MorphVoice(MorphOsc* osc, AdsrEnvelope* env): osc(osc), env(env) {}
   void trigger(bool state){
@@ -24,18 +28,27 @@ public:
   void gate(bool state){
     env->gate(state);
   }
+  void setFrequency(uint8_t note, float pitchbend){
+    float freq = 440.0f*exp2f((note - 69 + pitchbend)/12.0);
+    osc->setFrequency(freq);    
+  }
   void noteOn(uint8_t note, uint8_t velocity){
-    float freq = 440.0f*exp2f((note - 69 + pb)/12.0);
-    osc->setFrequency(freq);
-    debugMessage("freq", freq);
-    env->trigger(true);
+    this->note = note;
+    setFrequency(note, pb);
+    env->gate(true);
   }
   void noteOff(){
-    env->trigger(false);
-    pb = 0.0f;
+    env->gate(false);
   }
-  void pitchbend(uint16_t pitchbend){
+  void play(uint8_t note){
+    this->note = note;
+    setFrequency(note, pb);
+    env->trigger(true);
+  }
+  void pitchbend(int16_t pitchbend){
     pb = (pitchbend/8192.0f)*PITCHBEND_RANGE;
+    float freq = 440.0f*exp2f((note - 69 + pb)/12.0);
+    osc->setFrequency(freq);
   }
   float generate(){
     return osc->generate()*env->generate();
@@ -93,15 +106,20 @@ private:
   int basenote = 60;
   SmoothFloat x;
   SmoothFloat y;
+  SmoothFloat mod;
+
+  SineOscillator* lfo1;
+  SineOscillator* lfo2;
+  TapTempo<TRIGGER_LIMIT> tempo1;
+  TapTempo<TRIGGER_LIMIT> tempo2;
 public:
-  MorphPatch() {	
+  MorphPatch() :
+    tempo1(getSampleRate()*0.5), tempo2(getSampleRate()*0.25) {
     resourceL = getResource("wavetable1");
     resourceR = getResource("wavetable2");
-    // FloatArray bankL((float*)resourceL->getData(), SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
-    // FloatArray bankR((float*)resourceR->getData(), SAMPLE_LEN*NOF_Y_WF*NOF_X_WF);
     FloatArray bankL = resourceL->asFloatArray();
     FloatArray bankR = resourceR->asFloatArray();
-    // debugMessage("l/r", (int)resourceL->asFloatArray().getSize(), resourceR->asFloatArray().getSize());
+    debugMessage("l/r", (int)resourceL->asFloatArray().getSize(), resourceR->asFloatArray().getSize());
     morphL = MorphVoice::create(bankL, SAMPLE_LEN, 20, getSampleRate());
     morphR = MorphVoice::create(bankR, SAMPLE_LEN, 20, getSampleRate());
     registerParameter(PARAMETER_A, "Frequency");
@@ -114,9 +132,14 @@ public:
     setParameterValue(PARAMETER_C, 0.5);
     setParameterValue(PARAMETER_D, 0.5);
     setParameterValue(PARAMETER_E, 0.8);
+
+    lfo1 = SineOscillator::create(getSampleRate());
+    lfo2 = SineOscillator::create(getSampleRate());
   }
 
   ~MorphPatch(){
+    SineOscillator::destroy(lfo1);
+    SineOscillator::destroy(lfo2);
     MorphVoice::destroy(morphL);
     MorphVoice::destroy(morphR);
     Resource::destroy(resourceL);
@@ -124,28 +147,31 @@ public:
   }
 
   void buttonChanged(PatchButtonId bid, uint16_t value, uint16_t samples){
-    if(value){
-      switch(bid){
-      case PUSHBUTTON:
-      case BUTTON_A:
-  	morphL->noteOn(basenote, 80);
-  	morphR->noteOn(basenote, 80);
-  	break;
-      case BUTTON_B:
-  	morphL->noteOn(basenote+3, 80);
-  	morphR->noteOn(basenote+3, 80);
-  	break;
-      case BUTTON_C:
-  	morphL->noteOn(basenote+7, 80);
-  	morphR->noteOn(basenote+7, 80);
-  	break;
-      case BUTTON_D:
-  	morphL->noteOn(basenote+12, 80);
-  	morphR->noteOn(basenote+12, 80);
-  	break;
-      }
-    }else{
-      morphL->noteOff();
+    int note = 0;
+    switch(bid){
+    case PUSHBUTTON:
+    case BUTTON_A:
+      note = basenote;
+      break;
+    case BUTTON_B:
+      note = basenote+3;
+      break;
+    case BUTTON_C:
+      tempo1.trigger(value, samples);
+      if(value)
+	lfo1->reset();
+      note = basenote+7;
+      break;
+    case BUTTON_D:
+      tempo2.trigger(value, samples);
+      if(value)
+	lfo2->reset();
+      note = basenote+12;
+      break;
+    }
+    if(note && value){
+      morphL->play(note);
+      morphR->play(note);
     }
   }
 
@@ -167,27 +193,45 @@ public:
       morphL->pitchbend(msg.getPitchBend());
       morphR->pitchbend(msg.getPitchBend());
       break;
+    case CONTROL_CHANGE:
+      uint8_t cc = msg.getControllerNumber();
+      if(cc == 1){
+	mod = msg.getControllerValue()/256.0f;
+      }
+      break;
     }
   }
     
   void processAudio(AudioBuffer &buffer) {
     basenote = getParameterValue(PARAMETER_A)*48+40;
-    float x = getParameterValue(PARAMETER_B);  
-    float y = getParameterValue(PARAMETER_C); 
+    x = getParameterValue(PARAMETER_B);  
+    y = getParameterValue(PARAMETER_C); 
     float env = getParameterValue(PARAMETER_D);
     float gain = getParameterValue(PARAMETER_E);
     morphL->setEnvelope(env*4);
     morphL->getOscillator()->setMorphY(y);
-    morphL->getOscillator()->setMorphX(x);
+    morphL->getOscillator()->setMorphX(x+mod);
     morphR->setEnvelope(env*4);
     morphR->getOscillator()->setMorphY(y);
-    morphR->getOscillator()->setMorphX(x);
+    morphR->getOscillator()->setMorphX(x+mod);
     FloatArray left = buffer.getSamples(LEFT_CHANNEL);
     FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
     morphL->generate(left);
     left.multiply(gain);
     morphR->generate(right);
     right.multiply(gain);
+
+    // lfo
+    tempo1.clock(getBlockSize());
+    tempo2.clock(getBlockSize());
+    float rate = getSampleRate()/tempo1.getSamples();
+    lfo1->setFrequency(rate);
+    setParameterValue(PARAMETER_F, lfo1->generate()*0.5+0.5);
+    setButton(BUTTON_E, lfo1->getPhase() < M_PI);
+    rate = getSampleRate()/tempo2.getSamples();
+    lfo2->setFrequency(rate);
+    setParameterValue(PARAMETER_G, lfo2->generate()*0.5+0.5);
+    setButton(BUTTON_F, lfo2->getPhase() < M_PI);
   }
 };
 
