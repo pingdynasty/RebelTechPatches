@@ -7,25 +7,20 @@
 #include "Oscillator.h"
 #include "SineOscillator.h"
 #include "TapTempo.hpp"
-static const int TRIGGER_LIMIT = (1<<17);
+#include "WavFile.h"
 
+static const int TRIGGER_LIMIT = (1<<17);
 #define PITCHBEND_RANGE 2
 
-typedef struct {
-    char     chunk_id[4];
-    uint32_t chunk_size;
-    char     format[4];
-    char     fmtchunk_id[4];
-    uint32_t fmtchunk_size;
-    uint16_t audio_format;
-    uint16_t num_channels;
-    uint32_t sample_rate;
-    uint32_t byte_rate;
-    uint16_t block_align;
-    uint16_t bps;
-    char     datachunk_id[4];
-    uint32_t datachunk_size;
-}WavHeader;
+class AbstractVoice {
+public:
+  AbstractVoice& note(uint8_t note) = 0;
+  AbstractVoice& velocity(uint8_t velocity) = 0;
+  AbstractVoice& gate(bool on) = 0;
+  AbstractVoice& trigger() = 0;
+  AbstractVoice& pitchbend(float pb) = 0;
+  AbstractVoice& modulate(float mod) = 0;
+};
 
 class MorphVoice : public SignalGenerator {
   // public Oscillator, Envelope?
@@ -115,8 +110,6 @@ class MorphPatch : public Patch {
 private:
   MorphVoice* morphL;
   MorphVoice* morphR;
-  Resource* resourceL;
-  Resource* resourceR;
   int basenote = 60;
   SmoothFloat x;
   SmoothFloat y;
@@ -127,38 +120,24 @@ private:
   TapTempo<TRIGGER_LIMIT> tempo1;
   TapTempo<TRIGGER_LIMIT> tempo2;
 
-  ShortArray readwav(uint8_t* data){
-    WavHeader* wav_header = (WavHeader*)data;
-    if(strncmp(wav_header->chunk_id, "RIFF", 4) ||
-       strncmp(wav_header->format, "WAVE", 4) ||
-       wav_header->audio_format != 1 ||
-       wav_header->datachunk_size == 0 ||
-       wav_header->fmtchunk_size != 16)
+  MorphVoice* createVoice(const char* name){
+    Resource* resource = getResource(name);
+    WavFile wav = WavFile::create(resource->getData());
+    if(!wav.isValid())
       error(CONFIGURATION_ERROR_STATUS, "Invalid wav");
-    const int len = wav_header->datachunk_size/(wav_header->fmtchunk_size/8);
-    data += sizeof(WavHeader);
-    return ShortArray((int16_t*)data, len);
+    FloatArray bank = wav.createFloatArray();
+    Resource::destroy(resource);
+    MorphVoice* voice = MorphVoice::create(bank, SAMPLE_LEN, 20, getSampleRate());
+    FloatArray::destroy(bank);
+    return voice;
   }
 public:
   MorphPatch() :
     tempo1(getSampleRate()*0.5), tempo2(getSampleRate()*0.25) {
-    resourceL = getResource("wavetable1.wav");
-    resourceR = getResource("wavetable2.wav");
 
-    ShortArray samples = readwav((uint8_t*)resourceL->getData());
-    FloatArray bankL = FloatArray::create(samples.getSize());
-    samples.toFloat(bankL);
-    samples = readwav((uint8_t*)resourceR->getData());
-    FloatArray bankR = FloatArray::create(samples.getSize());
-    samples.toFloat(bankR);
-
-    debugMessage("l/r", (int)bankL.getSize(), bankR.getSize());
-
-    // FloatArray bankL = resourceL->asFloatArray();
-    // FloatArray bankR = resourceR->asFloatArray();
-    // debugMessage("l/r", (int)resourceL->asFloatArray().getSize(), resourceR->asFloatArray().getSize());
-    morphL = MorphVoice::create(bankL, SAMPLE_LEN, 20, getSampleRate());
-    morphR = MorphVoice::create(bankR, SAMPLE_LEN, 20, getSampleRate());
+    morphL = createVoice("wavetable1.wav");
+    morphR = createVoice("wavetable2.wav");
+    
     registerParameter(PARAMETER_A, "Frequency");
     registerParameter(PARAMETER_B, "Morph X");
     registerParameter(PARAMETER_C, "Morph Y");
@@ -182,8 +161,6 @@ public:
     SineOscillator::destroy(lfo2);
     MorphVoice::destroy(morphL);
     MorphVoice::destroy(morphR);
-    Resource::destroy(resourceL);
-    Resource::destroy(resourceR);
   }
 
   void buttonChanged(PatchButtonId bid, uint16_t value, uint16_t samples){
@@ -273,7 +250,7 @@ public:
     setParameterValue(PARAMETER_G, lfo2->generate()*0.5+0.5);
     setButton(BUTTON_F, lfo2->getPhase() < M_PI);
 
-    debugMessage("l1/l2", lfo1->getFrequency(), lfo2->getFrequency());
+    // debugMessage("l1/l2", lfo1->getFrequency(), lfo2->getFrequency());
   }
 };
 
