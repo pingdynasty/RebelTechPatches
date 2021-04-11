@@ -8,59 +8,31 @@
 #include "SineOscillator.h"
 #include "TapTempo.hpp"
 #include "WavFile.h"
+#include "AbstractSynth.h"
 
 static const int TRIGGER_LIMIT = (1<<17);
-#define PITCHBEND_RANGE 2
 
-class AbstractVoice {
-public:
-  AbstractVoice& note(uint8_t note) = 0;
-  AbstractVoice& velocity(uint8_t velocity) = 0;
-  AbstractVoice& gate(bool on) = 0;
-  AbstractVoice& trigger() = 0;
-  AbstractVoice& pitchbend(float pb) = 0;
-  AbstractVoice& modulate(float mod) = 0;
-};
-
-class MorphVoice : public SignalGenerator {
-  // public Oscillator, Envelope?
+class MorphVoice : public AbstractSynth {
 private:
   MorphOsc* osc;
   AdsrEnvelope* env;
-  float pb = 0.0f;
-  uint8_t note = 60;
+  float gain;
 public:
-  MorphVoice(MorphOsc* osc, AdsrEnvelope* env): osc(osc), env(env) {}
-  void trigger(bool state){
-    env->trigger(state);
+  MorphVoice(MorphOsc* osc, AdsrEnvelope* env): osc(osc), env(env) {}  
+  void setFrequency(float freq){
+    osc->setFrequency(freq);    
+  }
+  void setGain(float gain){
+    this->gain = gain;
+  }
+  void trigger(){
+    env->trigger();
   }
   void gate(bool state){
     env->gate(state);
   }
-  void setFrequency(uint8_t note, float pitchbend){
-    float freq = 440.0f*exp2f((note - 69 + pitchbend)/12.0);
-    osc->setFrequency(freq);    
-  }
-  void noteOn(uint8_t note, uint8_t velocity){
-    this->note = note;
-    setFrequency(note, pb);
-    env->gate(true);
-  }
-  void noteOff(){
-    env->gate(false);
-  }
-  void play(uint8_t note){
-    this->note = note;
-    setFrequency(note, pb);
-    env->trigger(true);
-  }
-  void pitchbend(int16_t pitchbend){
-    pb = (pitchbend/8192.0f)*PITCHBEND_RANGE;
-    float freq = 440.0f*exp2f((note - 69 + pb)/12.0);
-    osc->setFrequency(freq);
-  }
   float generate(){
-    return osc->generate()*env->generate();
+    return osc->generate()*env->generate()*gain;
   }
   using SignalGenerator::generate;
   MorphOsc* getOscillator(){
@@ -108,8 +80,8 @@ public:
 
 class MorphPatch : public Patch {
 private:
-  MorphVoice* morphL;
-  MorphVoice* morphR;
+  MonophonicSynth<MorphVoice>* morphL;
+  MonophonicSynth<MorphVoice>* morphR;
   int basenote = 60;
   SmoothFloat x;
   SmoothFloat y;
@@ -135,8 +107,8 @@ public:
   MorphPatch() :
     tempo1(getSampleRate()*0.5), tempo2(getSampleRate()*0.25) {
 
-    morphL = createVoice("wavetable1.wav");
-    morphR = createVoice("wavetable2.wav");
+    morphL = new MonophonicSynth<MorphVoice>(createVoice("wavetable1.wav"));
+    morphR = new MonophonicSynth<MorphVoice>(createVoice("wavetable2.wav"));
     
     registerParameter(PARAMETER_A, "Frequency");
     registerParameter(PARAMETER_B, "Morph X");
@@ -149,6 +121,11 @@ public:
     setParameterValue(PARAMETER_D, 0.5);
     setParameterValue(PARAMETER_E, 0.8);
 
+    registerParameter(PARAMETER_AA, "Decay");
+    registerParameter(PARAMETER_AB, "Sustain");
+    setParameterValue(PARAMETER_AA, 0.0);
+    setParameterValue(PARAMETER_AB, 0.9);
+
     // lfo
     lfo1 = SineOscillator::create(getSampleRate());
     lfo2 = SineOscillator::create(getSampleRate());
@@ -159,8 +136,10 @@ public:
   ~MorphPatch(){
     SineOscillator::destroy(lfo1);
     SineOscillator::destroy(lfo2);
-    MorphVoice::destroy(morphL);
-    MorphVoice::destroy(morphR);
+    MorphVoice::destroy(morphL->getVoice());
+    MorphVoice::destroy(morphR->getVoice());
+    delete morphL;
+    delete morphR;
   }
 
   void buttonChanged(PatchButtonId bid, uint16_t value, uint16_t samples){
@@ -186,37 +165,49 @@ public:
       note = basenote+12;
       break;
     }
-    if(note && value){
-      morphL->play(note);
-      morphR->play(note);
+    if(note){
+      if(value){
+	morphL->noteOn(MidiMessage::note(0, note, 80));
+	morphR->noteOn(MidiMessage::note(0, note, 80));
+      }else{
+	morphL->noteOff(MidiMessage::note(0, note, 0));
+	morphR->noteOff(MidiMessage::note(0, note, 0));
+      }
     }
   }
 
   void processMidi(MidiMessage msg){
-    switch(msg.getStatus()) {
-    case NOTE_OFF:
-      msg.data[3] = 0;
-      // deliberate fall-through
-    case NOTE_ON:
-      if(msg.data[3]){
-	morphL->noteOn(msg.getNote(), msg.getVelocity());
-	morphR->noteOn(msg.getNote(), msg.getVelocity());
-      }else{
-	morphL->noteOff();
-	morphR->noteOff();
-      }
-      break;
-    case PITCH_BEND_CHANGE:
-      morphL->pitchbend(msg.getPitchBend());
-      morphR->pitchbend(msg.getPitchBend());
-      break;
-    case CONTROL_CHANGE:
-      uint8_t cc = msg.getControllerNumber();
-      if(cc == 1){
-	mod = msg.getControllerValue()/256.0f;
-      }
-      break;
-    }
+    morphL->process(msg);
+    morphR->process(msg);
+    if(msg.isControlChange() && msg.getControllerNumber() == 1)
+      mod = msg.getControllerValue()/256.0f;
+      
+    // switch(msg.getStatus()) {
+    // case NOTE_OFF:
+    //   msg.data[3] = 0;
+    //   // deliberate fall-through
+    // case NOTE_ON:
+    //   if(msg.getVelocity()){
+    // 	morphL->noteOn(msg.getNote(), msg.getVelocity());
+    // 	morphR->noteOn(msg.getNote(), msg.getVelocity());
+    //   }else{
+    // 	morphL->noteOff(msg.getNote(), msg.getVelocity());
+    // 	morphR->noteOff(msg.getNote(), msg.getVelocity());
+    //   }
+    //   break;
+    // case PITCH_BEND_CHANGE:
+    //   morphL->pitchbend(msg.getPitchBend());
+    //   morphR->pitchbend(msg.getPitchBend());
+    //   break;
+    // case CONTROL_CHANGE:
+    //   uint8_t cc = msg.getControllerNumber();
+    //   if(cc == 1){
+    // 	mod = msg.getControllerValue()/256.0f;
+    // 	// morphL->modulate(mod);
+    // 	// morphR->modulate(mod);
+    //   }
+    //   break;
+    // }
   }
     
   void processAudio(AudioBuffer &buffer) {
@@ -225,12 +216,12 @@ public:
     y = getParameterValue(PARAMETER_C); 
     float env = getParameterValue(PARAMETER_D);
     float gain = getParameterValue(PARAMETER_E);
-    morphL->setEnvelope(env*4);
-    morphL->getOscillator()->setMorphY(y);
-    morphL->getOscillator()->setMorphX(x+mod);
-    morphR->setEnvelope(env*4);
-    morphR->getOscillator()->setMorphY(y);
-    morphR->getOscillator()->setMorphX(x+mod);
+    morphL->getVoice()->setEnvelope(env*4);
+    morphL->getVoice()->getOscillator()->setMorphY(y);
+    morphL->getVoice()->getOscillator()->setMorphX(x+mod);
+    morphR->getVoice()->setEnvelope(env*4);
+    morphR->getVoice()->getOscillator()->setMorphY(y);
+    morphR->getVoice()->getOscillator()->setMorphX(x+mod);
     FloatArray left = buffer.getSamples(LEFT_CHANNEL);
     FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
     morphL->generate(left);
@@ -238,6 +229,13 @@ public:
     morphR->generate(right);
     right.multiply(gain);
 
+    float decay = getParameterValue(PARAMETER_AA);
+    float sustain = getParameterValue(PARAMETER_AB);
+    morphL->getVoice()->getEnvelope()->setDecay(decay);
+    morphL->getVoice()->getEnvelope()->setSustain(sustain);
+    morphR->getVoice()->getEnvelope()->setDecay(decay);
+    morphR->getVoice()->getEnvelope()->setSustain(sustain);
+    
     // lfo
     tempo1.clock(getBlockSize());
     tempo2.clock(getBlockSize());
