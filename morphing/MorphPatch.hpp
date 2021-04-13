@@ -181,33 +181,6 @@ public:
     morphR->process(msg);
     if(msg.isControlChange() && msg.getControllerNumber() == 1)
       mod = msg.getControllerValue()/256.0f;
-      
-    // switch(msg.getStatus()) {
-    // case NOTE_OFF:
-    //   msg.data[3] = 0;
-    //   // deliberate fall-through
-    // case NOTE_ON:
-    //   if(msg.getVelocity()){
-    // 	morphL->noteOn(msg.getNote(), msg.getVelocity());
-    // 	morphR->noteOn(msg.getNote(), msg.getVelocity());
-    //   }else{
-    // 	morphL->noteOff(msg.getNote(), msg.getVelocity());
-    // 	morphR->noteOff(msg.getNote(), msg.getVelocity());
-    //   }
-    //   break;
-    // case PITCH_BEND_CHANGE:
-    //   morphL->pitchbend(msg.getPitchBend());
-    //   morphR->pitchbend(msg.getPitchBend());
-    //   break;
-    // case CONTROL_CHANGE:
-    //   uint8_t cc = msg.getControllerNumber();
-    //   if(cc == 1){
-    // 	mod = msg.getControllerValue()/256.0f;
-    // 	// morphL->modulate(mod);
-    // 	// morphR->modulate(mod);
-    //   }
-    //   break;
-    // }
   }
     
   void processAudio(AudioBuffer &buffer) {
@@ -247,8 +220,6 @@ public:
     lfo2->setFrequency(rate);
     setParameterValue(PARAMETER_G, lfo2->generate()*0.5+0.5);
     setButton(BUTTON_F, lfo2->getPhase() < M_PI);
-
-    // debugMessage("l1/l2", lfo1->getFrequency(), lfo2->getFrequency());
   }
 };
 
