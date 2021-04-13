@@ -221,14 +221,14 @@ public:
     }
     else longEnv->gate(false);
     amount = getParameterValue(PARAMETER_G); 			// TO DO : negative envelope
-    setParameterValue(PARAMETER_AG, longEnv->getNextSample()*amount);
+    setParameterValue(PARAMETER_AG, longEnv->generate()*amount);
     
     shortEnv->setSustain(getParameterValue(PARAMETER_H));
     if(getParameterValue(PARAMETER_BB) > threshold){
       shortEnv->gate(true);
     }
     else shortEnv->gate(false);
-    setParameterValue(PARAMETER_AH, shortEnv->getNextSample());
+    setParameterValue(PARAMETER_AH, shortEnv->generate());
     
     for(int n = 0; n<buffer.getSize(); n++){
 		
