@@ -80,8 +80,8 @@ public:
 
 class MorphPatch : public Patch {
 private:
-  MonophonicSynth<MorphVoice>* morphL;
-  MonophonicSynth<MorphVoice>* morphR;
+  MonophonicProcessor<MorphVoice>* morphL;
+  MonophonicProcessor<MorphVoice>* morphR;
   int basenote = 60;
   SmoothFloat x;
   SmoothFloat y;
@@ -107,8 +107,8 @@ public:
   MorphPatch() :
     tempo1(getSampleRate()*0.5), tempo2(getSampleRate()*0.25) {
 
-    morphL = new MonophonicSynth<MorphVoice>(createVoice("wavetable1.wav"));
-    morphR = new MonophonicSynth<MorphVoice>(createVoice("wavetable2.wav"));
+    morphL = new MonophonicProcessor<MorphVoice>(createVoice("wavetable1.wav"));
+    morphR = new MonophonicProcessor<MorphVoice>(createVoice("wavetable2.wav"));
     
     registerParameter(PARAMETER_A, "Frequency");
     registerParameter(PARAMETER_B, "Morph X");
@@ -127,8 +127,8 @@ public:
     setParameterValue(PARAMETER_AB, 0.9);
 
     // lfo
-    lfo1 = SineOscillator::create(getSampleRate());
-    lfo2 = SineOscillator::create(getSampleRate());
+    lfo1 = SineOscillator::create(getBlockRate());
+    lfo2 = SineOscillator::create(getBlockRate());
     registerParameter(PARAMETER_F, "LFO1>");
     registerParameter(PARAMETER_G, "LFO2>");
   }
@@ -156,13 +156,13 @@ public:
       tempo1.trigger(value, samples);
       if(value)
 	lfo1->reset();
-      note = basenote+7;
+      // note = basenote+7;
       break;
     case BUTTON_D:
       tempo2.trigger(value, samples);
       if(value)
-	lfo2->reset();
-      note = basenote+12;
+	lfo2->reset(); // todo: instead of hard reset, calculate to sync on next edge
+      // note = basenote+12;
       break;
     }
     if(note){
